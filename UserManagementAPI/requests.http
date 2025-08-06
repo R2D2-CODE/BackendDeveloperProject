@@ -68,12 +68,12 @@ Authorization: Bearer {{authToken}}
 Content-Type: {{contentType}}
 
 {
-  "firstName": "Alice",
-  "lastName": "Johnson",
-  "email": "alice.johnson@techhive.com",
-  "phoneNumber": "+1-555-0104",
+  "firstName": "Arturo",
+  "lastName": "Martinez",
+  "email": "arturo.martinez@sismetic.com",
+  "phoneNumber": "+1-555-111-0104",
   "department": "Marketing",
-  "position": "Marketing Manager"
+  "position": "Developer"
 }
 
 ### Extract user ID from create response
