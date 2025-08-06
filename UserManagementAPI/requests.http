@@ -33,6 +33,7 @@ Authorization: Bearer {{authToken}}
 
 ### 4. Try to access protected endpoint without token (should return 401)
 GET {{baseUrl}}/api/users
+Authorization: Bearer {{authToken}}
 
 ### 5. Try with invalid token format (should return 401)
 GET {{baseUrl}}/api/users
@@ -145,112 +146,44 @@ Authorization: Bearer {{authToken}}
 
 ### === MIDDLEWARE TESTING NOTES ===
 # 
-# This test suite validates:
-# 1. Authentication Middleware: All /api/users endpoints require valid JWT token
-# 2. Error Handling Middleware: Consistent error responses in JSON format
-# 3. Logging Middleware: All requests/responses are logged with correlation IDs
-# 4. Security Headers: Check browser dev tools for security headers
+# This test suite validates the TechHive Solutions middleware implementation:
+# 
+# 1. Authentication Middleware: 
+#    - All /api/users endpoints require valid JWT token
+#    - Public endpoints (/health, /info, /swagger) accessible without auth
+#    - Invalid tokens return 401 Unauthorized with correlation ID
+# 
+# 2. Error Handling Middleware: 
+#    - Consistent JSON error responses across all endpoints
+#    - Proper HTTP status codes (400, 401, 404, 500)
+#    - Correlation IDs for error tracking
+# 
+# 3. Logging Middleware: 
+#    - All requests/responses logged with correlation IDs
+#    - Performance metrics (response times)
+#    - User context and authentication status
+#    - Sensitive data sanitization
+# 
+# 4. Security Features:
+#    - Security headers in all responses
+#    - HTTPS enforcement with HSTS
+#    - JWT token-based authentication
 # 
 # Check the application logs to verify:
-# - Request logging with correlation IDs
-# - Authentication success/failure logs
-# - Exception handling logs
-# - Response logging with status codes
+# - Request logging: "REQUEST - CorrelationId: ... | Method: ... | Path: ..."
+# - Authentication logs: "AUTH SUCCESS/FAILED - CorrelationId: ..."
+# - Exception handling: "EXCEPTION - CorrelationId: ... | Exception: ..."
+# - Response logging: "RESPONSE - CorrelationId: ... | StatusCode: ..."
 # 
 # Demo users for testing:
 # - admin/admin123 (Administrator role)
 # - user/user123 (User role)
 # - techhive/techhive2024 (Manager role)
-###
-
-### 6. Try to create a user with duplicate email (should fail)
-POST {{baseUrl}}/api/users
-Content-Type: {{contentType}}
-
-{
-  "firstName": "Duplicate",
-  "lastName": "Email",
-  "email": "john.doe@techhive.com",
-  "phoneNumber": "+1-555-0999",
-  "department": "Test",
-  "position": "Tester"
-}
-
-### 7. Create user with validation errors (should fail)
-POST {{baseUrl}}/api/users
-Content-Type: {{contentType}}
-
-{
-  "firstName": "",
-  "lastName": "Test",
-  "email": "invalid-email",
-  "department": "",
-  "position": "Test Position"
-}
-
-### 8. Update a user (replace guid-here with an actual user ID)
-@updateUserId = guid-here
-PUT {{baseUrl}}/api/users/{{updateUserId}}
-Content-Type: {{contentType}}
-
-{
-  "firstName": "John",
-  "lastName": "Doe Updated",
-  "email": "john.doe.updated@techhive.com",
-  "phoneNumber": "+1-555-0201",
-  "department": "Engineering",
-  "position": "Lead Software Engineer",
-  "isActive": true
-}
-
-### 9. Update user with invalid data (should fail)
-PUT {{baseUrl}}/api/users/{{updateUserId}}
-Content-Type: {{contentType}}
-
-{
-  "firstName": "",
-  "lastName": "Doe",
-  "email": "invalid-email-format",
-  "department": "Engineering",
-  "position": "Engineer",
-  "isActive": true
-}
-
-### 10. Try to update non-existent user (should return 404)
-PUT {{baseUrl}}/api/users/00000000-0000-0000-0000-000000000000
-Content-Type: {{contentType}}
-
-{
-  "firstName": "Non",
-  "lastName": "Existent",
-  "email": "non.existent@techhive.com",
-  "department": "Test",
-  "position": "Tester",
-  "isActive": true
-}
-
-### 11. Delete a user (replace guid-here with an actual user ID)
-@deleteUserId = guid-here
-DELETE {{baseUrl}}/api/users/{{deleteUserId}}
-
-### 12. Try to delete the same user again (should return 404)
-DELETE {{baseUrl}}/api/users/{{deleteUserId}}
-
-### 13. Try to delete non-existent user (should return 404)
-DELETE {{baseUrl}}/api/users/00000000-0000-0000-0000-000000000000
-
-### 14. Get all users again to see the changes
-GET {{baseUrl}}/api/users
-Accept: {{contentType}}
-
-### 15. Try to get deleted user (should return 404)
-GET {{baseUrl}}/api/users/{{deleteUserId}}
-Accept: {{contentType}}
-
-###
-### Instructions for usage:
-### 1. Start the API project
-### 2. Replace {{userId}}, {{updateUserId}}, and {{deleteUserId}} with actual GUIDs from previous responses
-### 3. Click "Send Request" above each request to execute them
-### 4. Observe the responses and status codes
+#
+# Usage Instructions:
+# 1. Start API: dotnet run
+# 2. Execute login request (#1) to get JWT token
+# 3. Use token in subsequent authenticated requests
+# 4. Monitor logs for middleware activity
+# 5. Check browser dev tools for security headers
 ###
