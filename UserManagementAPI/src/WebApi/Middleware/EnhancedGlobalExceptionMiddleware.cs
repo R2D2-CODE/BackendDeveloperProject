@@ -12,11 +12,13 @@ public class GlobalExceptionMiddleware
 {
     private readonly RequestDelegate _next;
     private readonly ILogger<GlobalExceptionMiddleware> _logger;
+    private readonly IWebHostEnvironment _environment;
 
-    public GlobalExceptionMiddleware(RequestDelegate next, ILogger<GlobalExceptionMiddleware> logger)
+    public GlobalExceptionMiddleware(RequestDelegate next, ILogger<GlobalExceptionMiddleware> logger, IWebHostEnvironment environment)
     {
         _next = next;
         _logger = logger;
+        _environment = environment;
     }
 
     public async Task InvokeAsync(HttpContext context)
@@ -57,7 +59,7 @@ public class GlobalExceptionMiddleware
             {
                 Success = false,
                 Message = "Invalid input: required value is missing",
-                Errors = new List<string> { argNullEx.Message },
+                Errors = new List<string> { _environment.IsDevelopment() ? argNullEx.Message : "Required parameter is null" },
                 Data = new { CorrelationId = correlationId, Timestamp = DateTime.UtcNow }
             },
             
@@ -65,7 +67,7 @@ public class GlobalExceptionMiddleware
             {
                 Success = false,
                 Message = "Invalid input provided",
-                Errors = new List<string> { argEx.Message },
+                Errors = new List<string> { _environment.IsDevelopment() ? argEx.Message : "Invalid parameter value" },
                 Data = new { CorrelationId = correlationId, Timestamp = DateTime.UtcNow }
             },
             
@@ -81,7 +83,7 @@ public class GlobalExceptionMiddleware
             {
                 Success = false,
                 Message = "Resource not found",
-                Errors = new List<string> { notFoundEx.Message },
+                Errors = new List<string> { _environment.IsDevelopment() ? notFoundEx.Message : "The requested resource was not found" },
                 Data = new { CorrelationId = correlationId, Timestamp = DateTime.UtcNow }
             },
             
@@ -89,7 +91,7 @@ public class GlobalExceptionMiddleware
             {
                 Success = false,
                 Message = "Operation failed",
-                Errors = new List<string> { invalidOpEx.Message },
+                Errors = new List<string> { _environment.IsDevelopment() ? invalidOpEx.Message : "The requested operation could not be completed" },
                 Data = new { CorrelationId = correlationId, Timestamp = DateTime.UtcNow }
             },
             
@@ -105,7 +107,7 @@ public class GlobalExceptionMiddleware
             {
                 Success = false,
                 Message = "Internal server error",
-                Errors = new List<string> { "An unexpected error occurred" },
+                Errors = new List<string> { _environment.IsDevelopment() ? exception.Message : "An unexpected error occurred" },
                 Data = new { CorrelationId = correlationId, Timestamp = DateTime.UtcNow }
             }
         };
@@ -125,7 +127,7 @@ public class GlobalExceptionMiddleware
         var jsonResponse = JsonSerializer.Serialize(errorResponse, new JsonSerializerOptions
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            WriteIndented = true
+            WriteIndented = _environment.IsDevelopment()
         });
 
         await response.WriteAsync(jsonResponse);

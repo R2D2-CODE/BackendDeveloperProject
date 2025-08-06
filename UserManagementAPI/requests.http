@@ -1,0 +1,256 @@
+### User Management API - Test Requests with Middleware Testing
+
+@baseUrl = https://localhost:7001
+@contentType = application/json
+
+### === AUTHENTICATION TESTS ===
+
+### 1. Login to get JWT token (Public endpoint - no auth required)
+# @name login
+POST {{baseUrl}}/api/auth/login
+Content-Type: {{contentType}}
+
+{
+  "username": "admin",
+  "password": "admin123"
+}
+
+### 2. Login with invalid credentials (should fail)
+POST {{baseUrl}}/api/auth/login
+Content-Type: {{contentType}}
+
+{
+  "username": "invalid",
+  "password": "wrong"
+}
+
+### Extract token from login response
+@authToken = {{login.response.body.$.data.token}}
+
+### 3. Get current user info (requires authentication)
+GET {{baseUrl}}/api/auth/me
+Authorization: Bearer {{authToken}}
+
+### 4. Try to access protected endpoint without token (should return 401)
+GET {{baseUrl}}/api/users
+
+### 5. Try with invalid token format (should return 401)
+GET {{baseUrl}}/api/users
+Authorization: Invalid-Token-Format
+
+### 6. Try with empty token (should return 401)
+GET {{baseUrl}}/api/users
+Authorization: Bearer 
+
+### === PUBLIC ENDPOINTS (No authentication required) ===
+
+### 7. Health Check (Public endpoint)
+GET {{baseUrl}}/health
+
+### 8. API Info (Public endpoint)
+GET {{baseUrl}}/info
+
+### 9. Root endpoint (Public endpoint)
+GET {{baseUrl}}/
+
+### === PROTECTED USER MANAGEMENT ENDPOINTS ===
+
+### 10. Get all users (requires authentication)
+GET {{baseUrl}}/api/users
+Authorization: Bearer {{authToken}}
+Accept: {{contentType}}
+
+### 11. Create a new user (requires authentication)
+# @name createUser
+POST {{baseUrl}}/api/users
+Authorization: Bearer {{authToken}}
+Content-Type: {{contentType}}
+
+{
+  "firstName": "Alice",
+  "lastName": "Johnson",
+  "email": "alice.johnson@techhive.com",
+  "phoneNumber": "+1-555-0104",
+  "department": "Marketing",
+  "position": "Marketing Manager"
+}
+
+### Extract user ID from create response
+@userId = {{createUser.response.body.$.data.id}}
+
+### 12. Get specific user (requires authentication)
+GET {{baseUrl}}/api/users/{{userId}}
+Authorization: Bearer {{authToken}}
+Accept: {{contentType}}
+
+### 13. Update user (requires authentication)
+PUT {{baseUrl}}/api/users/{{userId}}
+Authorization: Bearer {{authToken}}
+Content-Type: {{contentType}}
+
+{
+  "firstName": "Alice Updated",
+  "lastName": "Johnson Updated",
+  "email": "alice.updated@techhive.com",
+  "phoneNumber": "+1-555-9999",
+  "department": "Engineering",
+  "position": "Senior Manager",
+  "isActive": true
+}
+
+### === ERROR HANDLING TESTS ===
+
+### 14. Test validation errors (should trigger error handling middleware)
+POST {{baseUrl}}/api/users
+Authorization: Bearer {{authToken}}
+Content-Type: {{contentType}}
+
+{
+  "firstName": "",
+  "lastName": "Test",
+  "email": "invalid-email",
+  "department": "",
+  "position": "Test Position"
+}
+
+### 15. Try to create user with duplicate email (business rule validation)
+POST {{baseUrl}}/api/users
+Authorization: Bearer {{authToken}}
+Content-Type: {{contentType}}
+
+{
+  "firstName": "Duplicate",
+  "lastName": "Email",
+  "email": "alice.johnson@techhive.com",
+  "phoneNumber": "+1-555-0999",
+  "department": "Test",
+  "position": "Tester"
+}
+
+### 16. Test exception handling - invalid GUID format
+GET {{baseUrl}}/api/users/invalid-guid-format
+Authorization: Bearer {{authToken}}
+
+### 17. Test 404 handling - non-existent user
+GET {{baseUrl}}/api/users/00000000-0000-0000-0000-000000000000
+Authorization: Bearer {{authToken}}
+
+### 18. Delete user (requires authentication)
+DELETE {{baseUrl}}/api/users/{{userId}}
+Authorization: Bearer {{authToken}}
+
+### 19. Try to access deleted user (should return 404)
+GET {{baseUrl}}/api/users/{{userId}}
+Authorization: Bearer {{authToken}}
+
+### === MIDDLEWARE TESTING NOTES ===
+# 
+# This test suite validates:
+# 1. Authentication Middleware: All /api/users endpoints require valid JWT token
+# 2. Error Handling Middleware: Consistent error responses in JSON format
+# 3. Logging Middleware: All requests/responses are logged with correlation IDs
+# 4. Security Headers: Check browser dev tools for security headers
+# 
+# Check the application logs to verify:
+# - Request logging with correlation IDs
+# - Authentication success/failure logs
+# - Exception handling logs
+# - Response logging with status codes
+# 
+# Demo users for testing:
+# - admin/admin123 (Administrator role)
+# - user/user123 (User role)
+# - techhive/techhive2024 (Manager role)
+###
+
+### 6. Try to create a user with duplicate email (should fail)
+POST {{baseUrl}}/api/users
+Content-Type: {{contentType}}
+
+{
+  "firstName": "Duplicate",
+  "lastName": "Email",
+  "email": "john.doe@techhive.com",
+  "phoneNumber": "+1-555-0999",
+  "department": "Test",
+  "position": "Tester"
+}
+
+### 7. Create user with validation errors (should fail)
+POST {{baseUrl}}/api/users
+Content-Type: {{contentType}}
+
+{
+  "firstName": "",
+  "lastName": "Test",
+  "email": "invalid-email",
+  "department": "",
+  "position": "Test Position"
+}
+
+### 8. Update a user (replace guid-here with an actual user ID)
+@updateUserId = guid-here
+PUT {{baseUrl}}/api/users/{{updateUserId}}
+Content-Type: {{contentType}}
+
+{
+  "firstName": "John",
+  "lastName": "Doe Updated",
+  "email": "john.doe.updated@techhive.com",
+  "phoneNumber": "+1-555-0201",
+  "department": "Engineering",
+  "position": "Lead Software Engineer",
+  "isActive": true
+}
+
+### 9. Update user with invalid data (should fail)
+PUT {{baseUrl}}/api/users/{{updateUserId}}
+Content-Type: {{contentType}}
+
+{
+  "firstName": "",
+  "lastName": "Doe",
+  "email": "invalid-email-format",
+  "department": "Engineering",
+  "position": "Engineer",
+  "isActive": true
+}
+
+### 10. Try to update non-existent user (should return 404)
+PUT {{baseUrl}}/api/users/00000000-0000-0000-0000-000000000000
+Content-Type: {{contentType}}
+
+{
+  "firstName": "Non",
+  "lastName": "Existent",
+  "email": "non.existent@techhive.com",
+  "department": "Test",
+  "position": "Tester",
+  "isActive": true
+}
+
+### 11. Delete a user (replace guid-here with an actual user ID)
+@deleteUserId = guid-here
+DELETE {{baseUrl}}/api/users/{{deleteUserId}}
+
+### 12. Try to delete the same user again (should return 404)
+DELETE {{baseUrl}}/api/users/{{deleteUserId}}
+
+### 13. Try to delete non-existent user (should return 404)
+DELETE {{baseUrl}}/api/users/00000000-0000-0000-0000-000000000000
+
+### 14. Get all users again to see the changes
+GET {{baseUrl}}/api/users
+Accept: {{contentType}}
+
+### 15. Try to get deleted user (should return 404)
+GET {{baseUrl}}/api/users/{{deleteUserId}}
+Accept: {{contentType}}
+
+###
+### Instructions for usage:
+### 1. Start the API project
+### 2. Replace {{userId}}, {{updateUserId}}, and {{deleteUserId}} with actual GUIDs from previous responses
+### 3. Click "Send Request" above each request to execute them
+### 4. Observe the responses and status codes
+###

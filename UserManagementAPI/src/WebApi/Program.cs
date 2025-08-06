@@ -47,6 +47,10 @@ builder.Services.AddControllers()
         };
     });
 
+// Configure JWT Authentication (using custom middleware)
+// Note: Using custom TokenAuthenticationMiddleware instead of built-in JWT Bearer
+// to have more control over the authentication process for TechHive requirements
+
 // Configure AutoMapper
 builder.Services.AddAutoMapper(typeof(UserMappingProfile));
 
@@ -130,12 +134,12 @@ builder.Services.AddMemoryCache();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+// Configure the HTTP request pipeline - TechHive Solutions Middleware Pipeline
 
-// Add global exception handling middleware first
+// 1. FIRST - Global exception handling middleware (catches all unhandled exceptions)
 app.UseMiddleware<GlobalExceptionMiddleware>();
 
-// Security headers
+// 2. Security headers (applied early for all responses)
 app.Use(async (context, next) =>
 {
     context.Response.Headers["X-Content-Type-Options"] = "nosniff";
@@ -151,6 +155,7 @@ app.Use(async (context, next) =>
     await next();
 });
 
+// 3. Swagger configuration (before authentication for public access)
 app.UseSwagger();
 app.UseSwaggerUI(c =>
 {
@@ -158,9 +163,11 @@ app.UseSwaggerUI(c =>
     c.RoutePrefix = string.Empty; // Set Swagger UI at apps root
     c.DisplayRequestDuration();
     c.EnableTryItOutByDefault();
-    c.DocumentTitle = "User Management API Documentation";
+    c.DocumentTitle = "TechHive Solutions - User Management API Documentation";
+    c.DocExpansion(Swashbuckle.AspNetCore.SwaggerUI.DocExpansion.None);
 });
 
+// 4. Environment-specific middleware
 if (app.Environment.IsDevelopment())
 {
     app.UseDeveloperExceptionPage();
@@ -174,7 +181,13 @@ else
 
 app.UseHttpsRedirection();
 
-// Add request logging
+// 5. SECOND - Authentication middleware (validates tokens)
+app.UseMiddleware<TokenAuthenticationMiddleware>();
+
+// 6. THIRD - Request/Response logging middleware (logs after authentication for complete context)
+app.UseMiddleware<RequestLoggingMiddleware>();
+
+// 7. Built-in request logging for additional Serilog integration
 app.UseSerilogRequestLogging(options =>
 {
     options.MessageTemplate = "HTTP {RequestMethod} {RequestPath} responded {StatusCode} in {Elapsed:0.0000} ms";
@@ -183,6 +196,7 @@ app.UseSerilogRequestLogging(options =>
         diagnosticContext.Set("RequestHost", httpContext.Request.Host.Value);
         diagnosticContext.Set("RequestScheme", httpContext.Request.Scheme);
         diagnosticContext.Set("UserAgent", httpContext.Request.Headers["User-Agent"].FirstOrDefault());
+        diagnosticContext.Set("UserId", httpContext.User?.Identity?.Name ?? "Anonymous");
     };
 });
 
